@@ -5,6 +5,12 @@ import { comments } from "./requests"
 const github = GitHub(process.env.GITHUB_ACCESS_TOKEN)
 const port = Number(process.env.PORT) || 5000
 const owner = process.env.ONLY_OWNER
+const mutedCommentIDsUnparsed = process.env.MUTED_COMMENT_IDS
+const mutedCommentIDs = mutedCommentIDsUnparsed ? Array.from(mutedCommentIDsUnparsed.split(","), Number) : []
+
+interface Comment {
+  id: number
+}
 
 const app = express()
 app.set("port", port)
@@ -17,12 +23,12 @@ app.get("/repos/:owner/:repo/issues/:number/comments", (req, res) => {
 
   const repo = req.params.repo
   const number = req.params.number
-  comments(owner, repo, number, github).then(comments => {
+  comments(owner, repo, number, github).then((comments: Comment[]) => {
     res.header("Access-Control-Allow-Origin", "*")
     res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE")
     res.header("Access-Control-Allow-Headers", "Content-Type, Authorization")
     res.status(200)
-    res.json(comments)
+    res.json(comments.filter(comment => !mutedCommentIDs.includes(comment.id)))
   })
 })
 app.get("/", (request, res) => {
